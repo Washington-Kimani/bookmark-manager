@@ -3,18 +3,7 @@
 import { useReducer, useCallback } from "react";
 import { api } from "@/src/configs/api";
 import { toast } from "sonner";
-
-export type Bookmark = {
-    id?: number;
-    body: string;
-    description: string;
-    url: string;
-    icon_url?: string;
-    short_url?: string;
-    visits: number;
-    created_at: string;
-    updated_at: string;
-};
+import {Bookmark} from "@/src/utils/types";
 
 interface BookmarkState {
     bookmarks: Bookmark[];

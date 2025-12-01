@@ -5,12 +5,14 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-export default function AuthLayout({
-                                     children,
-                                   }: {
-  children: React.ReactNode;
-}) {
-  const { isAuthenticated } = useAuth();
+export default function AuthLayout(
+    {
+        children,
+    }: {
+        children: React.ReactNode;
+    }
+) {
+  const { isAuthenticated, startActivityListener } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -18,6 +20,7 @@ export default function AuthLayout({
     if (isAuthenticated) {
       router.push("/bookmarks");
     }
+    startActivityListener();
   }, [isAuthenticated, router]);
 
   return (

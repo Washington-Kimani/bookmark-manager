@@ -12,13 +12,13 @@ export type CreateBookmarkDto = {
 };
 
 export type Bookmark = {
-  id?: number;
+  id: number;
   body: string;
   description: string;
   url: string;
   icon_url?: string;
   short_url?: string;
-  visit: number;
-  created_at: string;
-  updated_at: string;
+  visit?: number;
+  created_at?: string;
+  updated_at?: string;
 };

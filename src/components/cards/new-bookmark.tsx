@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { X } from "lucide-react";
-import type { Bookmark } from "@/src/hooks/useBookmarks";
+import type { Bookmark } from "@/src/utils/types";
 
 interface Props {
     open: boolean;
@@ -70,7 +70,7 @@ const CreateBookmark = ({ open, onOpenChange, createBookmark }: Props) => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => onOpenChange(false)}>
             <div className="bg-white p-6 rounded-xl shadow-lg w-11/12 max-w-md" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">Create New Bookmark</h2>
+                    <h2 className="text-xl text-[#023a3a] font-semibold">Create New Bookmark</h2>
                     <button onClick={() => onOpenChange(false)} className="text-gray-400 hover:text-gray-600 transition">
                         <X size={24} />
                     </button>
