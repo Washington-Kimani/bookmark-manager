@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { X } from "lucide-react";
-import type { Bookmark } from "@/src/hooks/useBookmarks";
+import type { Bookmark } from "@/src/utils/types";
 
 interface Props {
     open: boolean;

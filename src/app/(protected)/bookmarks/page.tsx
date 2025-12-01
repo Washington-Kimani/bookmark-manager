@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { Bookmark } from "@/src/utils/types";
 import Loading from "@/src/components/layout/loading";
 import CreateBookmark from "@/src/components/cards/new-bookmark";
 import { useBookmarks } from "@/src/hooks/useBookmarks";
@@ -31,12 +30,12 @@ const BookmarksPage = () => {
         error,
     } = useBookmarks(token);
 
-    const [isAddBookmarkOpen, setIsAddBookmarkOpen] = useState(false);
+    const [isAddBookmarkOpen, setIsAddBookmarkOpen] = useState<boolean>(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"recent" | "oldest" | "alphabetical">(
         "recent"
     );
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [openMenuId, setOpenMenuId] = useState<number | null>();
 
     // Fetch bookmarks on mount and when token changes
     useEffect(() => {
@@ -83,13 +82,13 @@ const BookmarksPage = () => {
         });
     };
 
-    const handleDeleteBookmark = async (id: string) => {
+    const handleDeleteBookmark = async (id: number) => {
         await deleteBookmark(id);
         setOpenMenuId(null);
     };
 
-    const handleCopyUrl = (url: string) => {
-        navigator.clipboard.writeText(url);
+    const handleCopyUrl = async (url: string) => {
+        await navigator.clipboard.writeText(url);
         toast.success("URL copied to clipboard");
     };
 
@@ -277,7 +276,7 @@ const BookmarksPage = () => {
                                         <button
                                             onClick={() =>
                                                 setOpenMenuId(
-                                                    openMenuId === bookmark.id ? null : bookmark.id
+                                                    openMenuId === bookmark?.id ? null : bookmark?.id
                                                 )
                                             }
                                             className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0 transition"
@@ -362,6 +361,7 @@ const BookmarksPage = () => {
             <CreateBookmark
                 open={isAddBookmarkOpen}
                 onOpenChange={setIsAddBookmarkOpen}
+                createBookmark={createBookmark}
             />
         </article>
     );
