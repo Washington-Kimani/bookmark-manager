@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: abyss;
+  themes: nord;
 }
 
 :root {
@@ -20,5 +20,6 @@ html {
 }
 
 body {
+  color: black;
   background-color: transparent;
 }

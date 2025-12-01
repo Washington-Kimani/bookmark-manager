@@ -12,7 +12,7 @@ export default function ProtectedLayout({
                                         }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, startActivityListener } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,6 +20,7 @@ export default function ProtectedLayout({
     if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
+    startActivityListener();
   }, [isLoading, isAuthenticated, router]);
 
   // show loading spinner while checking auth state
