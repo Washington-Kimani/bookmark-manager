@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bookmarks Manager (Frontend)
 
-## Getting Started
+A modern, minimal bookmarks manager web app built with Next.js App Router. It lets you create, search, sort, and manage bookmarks with an authenticated experience. This repository contains the frontend; it talks to a REST API backend via Axios.
 
-First, run the development server:
+## Features
+
+- Authentication (login/register) with token storage and session refresh
+- Create, list, search, sort (recent/oldest/alphabetical), and delete bookmarks
+- Responsive UI with Tailwind CSS and DaisyUI
+- Toast notifications via Sonner
+- Icons via Lucide React
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS v4 + DaisyUI
+- Axios, Sonner, Lucide React
+
+## Prerequisites
+
+- Node.js 18+ (LTS recommended)
+- A running backend API that exposes endpoints under `/api/v1` (see API expectations below)
+
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```
+NEXT_PUBLIC_API_URL='http://localhost:5000'
+# Or point to your hosted API
+# NEXT_PUBLIC_API_URL='https://bookmarks-flask-api.onrender.com'
+```
+
+Notes:
+- The app will call `${NEXT_PUBLIC_API_URL}/api/v1/...` (configured in `src/configs/api.ts`).
+- Do not include the trailing `/api/v1` in `NEXT_PUBLIC_API_URL`; it is added automatically.
+
+## Installation
+
+```bash
+# Install deps
+npm install
+# or
+pnpm install
+# or
+yarn install
+```
+
+## Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000 in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build & Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Build
+npm run build
 
-## Learn More
+# Start production server (after build)
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Available Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run dev` — start the Next.js development server
+- `npm run build` — build for production
+- `npm start` — start the production server
+- `npm run lint` — run ESLint
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure (high level)
 
-## Deploy on Vercel
+```
+src/
+  app/
+    (auth)/           # Auth routes (login, register)
+    (protected)/      # Protected routes (bookmarks)
+    globals.css       # Global styles (Tailwind)
+    layout.tsx        # Root layout (AuthProvider, Toaster)
+  components/         # UI components (auth forms, cards, layout)
+  contexts/
+    AuthContext.tsx   # Auth state, login/logout, token refresh, activity listener
+  hooks/
+    useBookmarks.ts   # CRUD & state management for bookmarks
+  configs/
+    api.ts            # Axios instance using NEXT_PUBLIC_API_URL
+  utils/
+    types.ts          # Shared TypeScript types
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Authentication Flow
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `AuthContext` stores `token` and `user` in `localStorage` and provides `login`, `logout`, and `refreshToken`.
+- An activity listener can trigger token refresh on user activity (throttled).
+- Protected pages (e.g., `/bookmarks`) rely on `useAuth()` and the presence of a valid token.
+
+## Bookmarks UX
+
+- Search across `body`, `url`, and `description` fields.
+- Sort by recent, oldest, or alphabetical.
+- Create and delete bookmarks inline with optimistic UI updates and toasts.
+
+## API Expectations
+
+The frontend expects a REST API under `${NEXT_PUBLIC_API_URL}/api/v1`. Common endpoints used:
+
+- `POST /auth/login` — returns `{ token, user }`
+- `POST /auth/register` — returns `{ token, user }` (or as defined by your backend)
+- `POST /auth/refresh` — returns `{ token }` (new access token)
+- `GET /bookmarks` — returns `{ data: Bookmark[] }`
+- `POST /bookmarks` — returns `{ data: Bookmark }`
+- `PUT /bookmarks/:id` — returns `{ data: Bookmark }`
+- `DELETE /bookmarks/:id` — returns 204/200
+
+Adjust shapes as needed to match your backend; see calls in `src/hooks/useBookmarks.ts` and `src/contexts/AuthContext.tsx`.
+
+## Styling
+
+- Tailwind CSS v4 with DaisyUI (see `postcss.config.mjs`, `globals.css`)
+- Default theme is `nord` via `data-theme` on `<html>` in `app/layout.tsx`
+
+## Troubleshooting
+
+- 401/403 errors: ensure `NEXT_PUBLIC_API_URL` points to the correct backend and CORS is configured there.
+- Network errors in development: verify your backend runs at the configured host/port and that it serves `/api/v1` routes.
+- UI builds but data empty: check that the API returns `{ data: ... }` as expected by the hooks.
+
+## License
+
+MIT — see LICENSE if provided. Otherwise, you may adapt as needed for your project.
