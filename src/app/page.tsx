@@ -19,7 +19,7 @@ export default function Home() {
 
   return (
     <div className="w-full h-screen flex flex-col items-center justify-center relative bg-[rgba(0,0,0,0.5)]">
-      <section className="w-11/12 lg:w-3/5 h-3/4 flex flex-col lg:flex-row bg-white rounded-xl shadow-lg overflow-hidden">
+      <section className="w-11/12 lg:w-3/5 h-3/4 flex flex-col lg:flex-row bg-white rounded-xl shadow-xl shadow-cyan-500/50 overflow-hidden">
         {/* Image */}
         <div className="w-full lg:w-1/2 h-full relative">
           <Image

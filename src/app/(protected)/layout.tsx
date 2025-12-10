@@ -34,8 +34,8 @@ export default function ProtectedLayout({
   }
 
   return (
-      <div className="flex flex-col h-screen">
-        <Navbar />
+      <div className="flex flex-col overflow-y-hidden max-h-screen">
+        {/*<Navbar />*/}
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex-1 overflow-auto">{children}</main>

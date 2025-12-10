@@ -19,25 +19,26 @@ interface AuthContextType {
     logout: () => void;
     isAuthenticated: boolean;
     isLoading: boolean;
-    // added functions to control listener
     startActivityListener: () => void;
     stopActivityListener: () => void;
-    // optional: allow manual refresh trigger
     refreshToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const REFRESH_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes - adjust as needed
+const REFRESH_THROTTLE_MS = 5 * 60 * 1000;
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [token, setToken] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // refs to manage listener state and throttle
+    // refs to manage listener state, throttle, and inactivity timeout
     const isListeningRef = useRef(false);
     const lastRefreshRef = useRef(0);
+    const lastActivityRef = useRef(Date.now());
+    const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityHandlerRef = useRef<() => void>(() => {});
 
     // Initialize from localStorage on mount
@@ -53,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             } catch (error) {
                 console.error("Failed to restore auth session:", error);
-                // Clear invalid data
                 localStorage.removeItem("auth_token");
                 localStorage.removeItem("auth_user");
             } finally {
@@ -67,9 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback((newToken: string, newUser: User) => {
         setToken(newToken);
         setUser(newUser);
-        // Store in localStorage for persistence
         localStorage.setItem("auth_token", newToken);
         localStorage.setItem("auth_user", JSON.stringify(newUser));
+        lastActivityRef.current = Date.now();
     }, []);
 
     const logout = useCallback(() => {
@@ -77,21 +77,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         localStorage.removeItem("auth_token");
         localStorage.removeItem("auth_user");
+        if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current);
+        }
     }, []);
 
     const isAuthenticated = !!token && !!user;
 
     /**
      * refreshToken - calls the backend refresh endpoint and updates token if successful
-     * returns the new token string or null on failure
      */
     const refreshToken = useCallback(async (): Promise<string | null> => {
         if (!token) return null;
 
         try {
-            // Adjust endpoint or payload as your backend expects
             const response = await api.post(
-                "/auth/refresh",
+                "/auth/token",
                 {},
                 {
                     headers: {
@@ -100,7 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             );
 
-            // Try a couple common shapes for new token
             const newToken =
                 response?.data?.token ?? response?.data?.data?.token ?? null;
 
@@ -109,33 +109,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem("auth_token", newToken);
                 return newToken;
             } else {
-                // no token in response -> treat as failure
                 console.warn("Refresh response did not contain a token:", response?.data);
                 return null;
             }
         } catch (err) {
             console.error("Failed to refresh token:", err);
-            // Optional: auto-logout on failed refresh. Keep or remove as desired.
-            logout();
+            // Don't logout on failed refresh - only logout on inactivity timeout
             return null;
         }
-    }, [token, logout]);
+    }, [token]);
+
+    /**
+     * resetInactivityTimeout - resets the inactivity timer on user activity
+     */
+    const resetInactivityTimeout = useCallback(() => {
+        // Clear existing timeout
+        if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current);
+        }
+
+        // Set new timeout - logout if no activity for 30 minutes
+        inactivityTimeoutRef.current = setTimeout(() => {
+            console.warn("User inactive for 30 minutes - logging out");
+            logout();
+        }, INACTIVITY_TIMEOUT_MS);
+    }, [logout]);
 
     /**
      * internal function that runs on user activity; throttles refresh calls
      */
     const handleActivity = useCallback(async () => {
         if (!token) return;
+
+        lastActivityRef.current = Date.now();
+        resetInactivityTimeout();
+
         const now = Date.now();
         if (now - lastRefreshRef.current < REFRESH_THROTTLE_MS) {
-            // still within throttle window -> skip
             return;
         }
         lastRefreshRef.current = now;
         await refreshToken();
-    }, [token, refreshToken]);
+    }, [token, refreshToken, resetInactivityTimeout]);
 
-    // Wire the handler ref (so we can add/remove the same handler function)
+    // Wire the handler ref
     useEffect(() => {
         activityHandlerRef.current = () => {
             void handleActivity();
@@ -144,7 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     /**
      * startActivityListener - adds event listeners to watch for user actions
-     * and triggers a token refresh (rate-limited).
      */
     const startActivityListener = useCallback(() => {
         if (isListeningRef.current) return;
@@ -158,7 +174,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const handler = () => activityHandlerRef.current();
 
-        // common actions
         add(window, "mousemove", handler);
         add(window, "mousedown", handler);
         add(window, "keydown", handler);
@@ -166,7 +181,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         add(window, "touchstart", handler as EventListener);
         add(document, "visibilitychange", handler);
 
-        // store a cleanup on the ref in case stop is called
         (startActivityListener as any).__cleanup = () => {
             remove(window, "mousemove", handler);
             remove(window, "mousedown", handler);
@@ -186,7 +200,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof cleanup === "function") {
             cleanup();
         } else {
-            // fallback: try to remove using the same handler reference
             const handler = () => activityHandlerRef.current();
             window.removeEventListener("mousemove", handler);
             window.removeEventListener("mousedown", handler);
@@ -199,19 +212,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     /**
-     * Auto-start listener when we have a token. This is optional behavior.
-     * If you prefer manual control, remove this effect and call startActivityListener yourself.
+     * Auto-start listener when we have a token
      */
     useEffect(() => {
         if (token && !isListeningRef.current) {
             startActivityListener();
+            resetInactivityTimeout();
         }
 
-        // stop listener on logout/unmount
         return () => {
             stopActivityListener();
+            if (inactivityTimeoutRef.current) {
+                clearTimeout(inactivityTimeoutRef.current);
+            }
         };
-    }, [token]);
+    }, [token, startActivityListener, stopActivityListener, resetInactivityTimeout]);
 
     return (
         <AuthContext.Provider
