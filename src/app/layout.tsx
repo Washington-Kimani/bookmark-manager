@@ -26,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-      <html lang="en" data-theme={"nord"}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#132E35] relative`}>
       <AuthProvider>
         <Toaster position={"top-center"} richColors/>
         {children}

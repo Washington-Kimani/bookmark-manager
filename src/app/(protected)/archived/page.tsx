@@ -1,59 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/src/contexts/AuthContext";
+import {useBookmarks} from "@/src/hooks/useBookmarks";
+import {useAuth} from "@/src/contexts/AuthContext";
+import {useEffect, useState} from "react";
 import Loading from "@/src/components/layout/loading";
-import CreateBookmark from "@/src/components/cards/new-bookmark";
-import { useBookmarks } from "@/src/hooks/useBookmarks";
+import {toast} from "sonner";
+import {Archive, Calendar, ExternalLink, Eye, Flag, MoreVertical, Search, Trash2} from "lucide-react";
 import Image from "next/image";
-import {
-    Plus,
-    MoreVertical,
-    Eye,
-    Calendar,
-    Flag,
-    Search,
-    Trash2,
-    Archive,
-    ExternalLink,
-} from "lucide-react";
-import { toast } from "sonner";
+import Link from "next/link";
 
-const BookmarksPage = () => {
-    const { token } = useAuth();
+
+const ArchivedPage = () => {
+    const {token} = useAuth();
     const {
-        fetchBookmarks,
         bookmarks,
-        loading: bookmarksLoading,
-        archiveBookmark,
-        createBookmark,
+        fetchArchivedBookmarks,
         deleteBookmark,
-        error,
+        loading: bookmarksLoading,
+        error
     } = useBookmarks(token);
 
-    const [isAddBookmarkOpen, setIsAddBookmarkOpen] = useState<boolean>(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    // states
+    const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"recent" | "oldest" | "alphabetical">(
         "recent"
     );
     const [openMenuId, setOpenMenuId] = useState<number | null>();
 
-    // Fetch bookmarks on mount and when token changes
+    // fetch archived bookmarks on component mount
     useEffect(() => {
-        if (token) {
-            fetchBookmarks();
+        if (token)  {
+            fetchArchivedBookmarks();
         }
     }, [token]);
 
-    // Filter bookmarks based on search query
-    const filteredBookmarks = bookmarks.filter((bookmark) =>
-        (bookmark?.body?.toLowerCase() || "").includes(searchQuery.trim().toLowerCase()) ||
-        (bookmark?.url?.toLowerCase() || "").includes(searchQuery.trim().toLowerCase()) ||
-        (bookmark?.description?.toLowerCase() || "").includes(searchQuery.trim().toLowerCase())
-    );
+    // filter bookmarks
+    const filteredBookmarks = bookmarks.filter(bookmark=>
+        bookmark.body?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bookmark.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bookmark.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
 
-
-    // Sort bookmarks
+    // sort bookmarks
     const sortedBookmarks = [...filteredBookmarks].sort((a, b) => {
         switch (sortBy) {
             case "oldest":
@@ -72,7 +60,7 @@ const BookmarksPage = () => {
         }
     });
 
-    // Format date function
+    // format date function
     const formatDate = (dateString?: string) => {
         if (!dateString) return "N/A";
         const date = new Date(dateString);
@@ -84,24 +72,9 @@ const BookmarksPage = () => {
         });
     };
 
-    // handler method for creating bookmark
-    const handleCreateBookmark = async (newBookmark:{body: string, url: string, description: string}) => {
-        const created = await createBookmark(newBookmark);
-        if(created){
-            setSearchQuery("");
-        }
-    }
-
-    // archive bookmark handler method
-    const handleArchiveBookmark = async (id: number) => {
-        await archiveBookmark(id);
-        setSearchQuery("");
-    }
-
     const handleDeleteBookmark = async (id: number) => {
         await deleteBookmark(id);
         setOpenMenuId(null);
-        setSearchQuery("");
     };
 
     const handleCopyUrl = async (url: string) => {
@@ -109,8 +82,9 @@ const BookmarksPage = () => {
         toast.success("URL copied to clipboard");
     };
 
-    // Show loading while fetching bookmarks
-    if (bookmarksLoading) {
+
+    // show loading
+    if(bookmarksLoading) {
         return <Loading />;
     }
 
@@ -123,7 +97,7 @@ const BookmarksPage = () => {
                         <p className="text-red-700">{error}</p>
                     </div>
                     <button
-                        onClick={() => fetchBookmarks()}
+                        onClick={() => fetchArchivedBookmarks()}
                         className="px-4 py-2 bg-[#056760] text-white rounded-md hover:bg-[#045d55] transition"
                     >
                         Try Again
@@ -134,49 +108,30 @@ const BookmarksPage = () => {
     }
 
     // show empty state
-    if (!bookmarksLoading && bookmarks.length === 0) {
+    if (bookmarks.length === 0 && !bookmarksLoading) {
         return (
             <section className="w-full h-screen flex items-center justify-center p-4">
                 <div className="w-full lg:w-1/2 text-center">
                     <div className="mb-6 p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                         <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                            No bookmarks yet!
+                            No archived bookmarks yet!
                         </h1>
                         <p className="text-gray-600 mb-6">
-                            Start building your collection by creating your first bookmark.
+                            Go back to the <Link href="/bookmarks" className={"text-emerald-400"}>bookmarks</Link> page.
                         </p>
-                        <button
-                            onClick={() => setIsAddBookmarkOpen(true)}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#056760] text-white font-medium rounded-lg hover:bg-[#045d55] transition shadow-lg"
-                        >
-                            <Plus size={20} />
-                            Create First Bookmark
-                        </button>
                     </div>
                 </div>
-                <CreateBookmark
-                    open={isAddBookmarkOpen}
-                    onOpenChange={setIsAddBookmarkOpen}
-                    createBookmark={handleCreateBookmark}
-                />
+
             </section>
         );
     }
-
     return (
         <article className="relative h-[95vh] bg-[#343940] my-6 mx-6 z-0 rounded-lg overflow-y-auto">
             <div className="flex-1 w-full h-full overflow-auto p-4 md:p-6">
                 {/* Header Section */}
                 <div className="mb-8">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                        <h1 className="text-3xl text-white font-bold">All Bookmarks</h1>
-                        <button
-                            onClick={() => setIsAddBookmarkOpen(true)}
-                            className="hidden md:flex items-center gap-2 px-4 py-2 bg-[#056760] text-white rounded-lg font-medium hover:bg-[#045d55] transition"
-                        >
-                            <Plus size={18} />
-                            Add Bookmark
-                        </button>
+                        <h1 className="text-3xl text-white font-bold">Archived Bookmarks</h1>
                     </div>
 
                     {/* Search and Filter Bar */}
@@ -188,9 +143,9 @@ const BookmarksPage = () => {
                                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                             />
                             <input
-                                type="search"
+                                type="text"
                                 placeholder="Search bookmarks by title, URL, or description..."
-                                value={searchQuery.trim()}
+                                value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#056760] focus:border-transparent transition bg-white text-gray-900"
                             />
@@ -209,7 +164,7 @@ const BookmarksPage = () => {
                     </div>
 
                     {/* Search Results Count */}
-                    {searchQuery.trim() && (
+                    {searchQuery && (
                         <p className="text-sm text-gray-500 mt-2">
                             Found {sortedBookmarks.length} bookmark
                             {sortedBookmarks.length !== 1 ? "s" : ""}
@@ -218,11 +173,11 @@ const BookmarksPage = () => {
                 </div>
 
                 {/* Bookmarks Grid */}
-                {sortedBookmarks.length === 0 && !bookmarksLoading ?(
+                {sortedBookmarks.length === 0 ? (
                     <div className="text-center py-12">
                         <Search size={48} className="mx-auto text-gray-300 mb-4" />
                         <p className="text-gray-500 text-lg">
-                            {`No bookmarks found matching ${searchQuery.trim()}`}
+                            {`No bookmarks found matching ${searchQuery}`}
                         </p>
                         <button
                             onClick={() => setSearchQuery("")}
@@ -242,7 +197,7 @@ const BookmarksPage = () => {
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                                            {bookmark.icon_url || bookmarksLoading ? (
+                                            {bookmark.icon_url ? (
                                                 <Image
                                                     width={30}
                                                     height={30}
@@ -255,7 +210,7 @@ const BookmarksPage = () => {
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
-                                                    {bookmark?.body?.charAt(0).toUpperCase()}
+                                                    {bookmark.body.charAt(0).toUpperCase()}
                                                 </div>
                                             )}
                                         </div>
@@ -312,7 +267,7 @@ const BookmarksPage = () => {
                                                 >
                                                     📋 Copy URL
                                                 </button>
-                                                <button onClick={()=>handleArchiveBookmark(bookmark.id)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-200">
+                                                <button onClick={()=>archiveBookmark(bookmark.id)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-200">
                                                     <Archive size={16} />
                                                     Archive
                                                 </button>
@@ -352,23 +307,8 @@ const BookmarksPage = () => {
                     </div>
                 )}
             </div>
-
-            {/* Mobile floating add button */}
-            <button
-                onClick={() => setIsAddBookmarkOpen(true)}
-                className="md:hidden fixed bottom-6 right-6 bg-[#056760] text-white w-14 h-14 rounded-full flex items-center justify-center hover:bg-[#045d55] shadow-lg transition z-40"
-            >
-                <Plus size={24} />
-            </button>
-
-            {/* Create Bookmark Modal */}
-            <CreateBookmark
-                open={isAddBookmarkOpen}
-                onOpenChange={setIsAddBookmarkOpen}
-                createBookmark={handleCreateBookmark}
-            />
         </article>
-    );
-};
+    )
+}
 
-export default BookmarksPage;
+export default ArchivedPage;

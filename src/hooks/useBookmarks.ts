@@ -15,6 +15,8 @@ type BookmarkAction =
     | { type: "SET_BOOKMARKS"; payload: Bookmark[] }
     | { type: "ADD_BOOKMARK"; payload: Bookmark }
     | { type: "UPDATE_BOOKMARK"; payload: Bookmark }
+    | { type: "ARCHIVE_BOOKMARK"; payload: Bookmark }
+    | { type: "SET_ARCHIVED_BOOKMARKS"; payload: Bookmark[] }
     | { type: "DELETE_BOOKMARK"; payload: number }
     | { type: "SET_LOADING"; payload: boolean }
     | { type: "SET_ERROR"; payload: string | null };
@@ -40,7 +42,6 @@ function bookmarkReducer(
         case "ADD_BOOKMARK":
             return {
                 ...state,
-                // Add new bookmark to top of list
                 bookmarks: [action.payload, ...state.bookmarks],
                 error: null,
             };
@@ -52,10 +53,21 @@ function bookmarkReducer(
                 ),
                 error: null,
             };
+        case "ARCHIVE_BOOKMARK":
+            return {
+                ...state,
+                bookmarks: [action.payload],
+                error: null,
+            };
+        case "SET_ARCHIVED_BOOKMARKS":
+            return {
+                ...state,
+                bookmarks: action.payload,
+                error: null,
+            }
         case "DELETE_BOOKMARK":
             return {
                 ...state,
-                // keep everything except the bookmark with the passed id
                 bookmarks: state.bookmarks.filter((b) => b.id !== action.payload),
                 error: null,
             };
@@ -152,6 +164,69 @@ export function useBookmarks(token: string | null) {
         [token]
     );
 
+    const fetchArchivedBookmarks = useCallback(async () => {
+        if (!token) {
+            dispatch({
+                type: "SET_ERROR",
+                payload: "Not authenticated",
+            });
+            return;
+        }
+
+        dispatch({ type: "SET_LOADING", payload: true });
+
+        try {
+            const response = await api.get("/bookmarks/archived", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            // assumes API returns { data: { data: Bookmark[] } }
+            dispatch({ type: "SET_ARCHIVED_BOOKMARKS", payload: response.data.data });
+            dispatch({ type: "SET_LOADING", payload: false });
+        } catch (error) {
+            dispatch({
+                type: "SET_ERROR",
+                payload: `Failed to fetch archived bookmarks ${error}`,
+            });
+        }
+    }, [token]);
+
+    const archiveBookmark = useCallback(
+        async (id: number) => {
+            if (!token) {
+                dispatch({
+                    type: "SET_ERROR",
+                    payload: "Not authenticated",
+                });
+                return;
+            }
+
+            try {
+                const response = await api.put(
+                    `/bookmarks/${id}/archive`,
+                    { is_archived: true },
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+
+                const archivedBookmark: Bookmark = response.data.data;
+
+                // dispatch to update the bookmark state after archiving
+                dispatch({ type: "ARCHIVE_BOOKMARK", payload: archivedBookmark });
+
+                // refetch all bookmarks or archived bookmarks
+                toast.success("Bookmark archived successfully");
+                return archivedBookmark;
+            } catch (error) {
+                const errorMsg = `Failed to archive bookmark: ${error}`;
+                dispatch({ type: "SET_ERROR", payload: errorMsg });
+                toast.error(errorMsg);
+            }
+        },
+        [token]
+    );
+
     const deleteBookmark = useCallback(
         async (id: number) => {
             if (!token) {
@@ -181,6 +256,8 @@ export function useBookmarks(token: string | null) {
         fetchBookmarks,
         createBookmark,
         updateBookmark,
+        archiveBookmark,
+        fetchArchivedBookmarks,
         deleteBookmark,
     };
 }

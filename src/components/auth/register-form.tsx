@@ -33,8 +33,8 @@ const RegisterForm = (
         setShowPassword(!showPassword);
     }
     return (
-        <main className={"w-11/12 mx-auto lg:w-full h-screen flex items-center justify-center shadow-lg"}>
-            <div className="w-full sm:w-96 p-8 bg-white shadow-lg rounded-lg">
+        <main className={"w-11/12 mx-auto lg:w-full h-screen flex items-center justify-center"}>
+            <div className="w-full sm:w-96 p-8 bg-white shadow-xl shadow-cyan-500/50 rounded-lg">
                 <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">Register</h2>
 
                 {/* error message */}
