@@ -16,6 +16,7 @@ const ArchivedPage = () => {
         bookmarks,
         fetchArchivedBookmarks,
         deleteBookmark,
+        archiveBookmark,
         loading: bookmarksLoading,
         error
     } = useBookmarks(token);
@@ -36,9 +37,9 @@ const ArchivedPage = () => {
 
     // filter bookmarks
     const filteredBookmarks = bookmarks.filter(bookmark=>
-        bookmark.body?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        bookmark.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        bookmark.description?.toLowerCase().includes(searchQuery.toLowerCase())
+        bookmark?.body?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bookmark?.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bookmark?.description?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     // sort bookmarks
@@ -77,6 +78,12 @@ const ArchivedPage = () => {
         setOpenMenuId(null);
     };
 
+    const handleUnArchiveBookmark = async (id: number) => {
+        await archiveBookmark(id, false);
+        setOpenMenuId(null);
+        setSearchQuery("");
+    };
+
     const handleCopyUrl = async (url: string) => {
         await navigator.clipboard.writeText(url);
         toast.success("URL copied to clipboard");
@@ -108,7 +115,7 @@ const ArchivedPage = () => {
     }
 
     // show empty state
-    if (bookmarks.length === 0 && !bookmarksLoading) {
+    if (!bookmarksLoading && bookmarks.length === 0) {
         return (
             <section className="w-full h-screen flex items-center justify-center p-4">
                 <div className="w-full lg:w-1/2 text-center">
@@ -177,18 +184,20 @@ const ArchivedPage = () => {
                     <div className="text-center py-12">
                         <Search size={48} className="mx-auto text-gray-300 mb-4" />
                         <p className="text-gray-500 text-lg">
-                            {`No bookmarks found matching ${searchQuery}`}
+                            {searchQuery.trim() ? `No bookmarks found matching "${searchQuery.trim()}"` : "No bookmarks found"}
                         </p>
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className="mt-4 text-[#056760] font-medium hover:underline"
-                        >
-                            Clear search
-                        </button>
+                        {searchQuery.trim() && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="mt-4 text-[#056760] font-medium hover:underline"
+                            >
+                                Clear search
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        {sortedBookmarks.map((bookmark) => (
+                        {sortedBookmarks.filter(b => b && typeof b === "object" && "id" in b).map((bookmark) => (
                             <div
                                 key={bookmark.id}
                                 className="bg-[#e5e5e6] rounded-lg border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow duration-200 hover:border-gray-300"
@@ -267,9 +276,9 @@ const ArchivedPage = () => {
                                                 >
                                                     📋 Copy URL
                                                 </button>
-                                                <button onClick={()=>archiveBookmark(bookmark.id)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-200">
+                                                <button onClick={()=>handleUnArchiveBookmark(bookmark.id)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-200">
                                                     <Archive size={16} />
-                                                    Archive
+                                                    Unarchive
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteBookmark(bookmark.id)}

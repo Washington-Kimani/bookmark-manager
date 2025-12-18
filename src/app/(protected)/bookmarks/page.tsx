@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import Loading from "@/src/components/layout/loading";
 import CreateBookmark from "@/src/components/cards/new-bookmark";
+import type {Bookmark} from "@/src/utils/types";
 import { useBookmarks } from "@/src/hooks/useBookmarks";
 import Image from "next/image";
 import {
@@ -38,22 +39,21 @@ const BookmarksPage = () => {
     );
     const [openMenuId, setOpenMenuId] = useState<number | null>();
 
-    // Fetch bookmarks on mount and when token changes
+    // fetch bookmarks on mount and when token changes
     useEffect(() => {
         if (token) {
             fetchBookmarks();
         }
-    }, [token]);
+    }, [token, fetchBookmarks]);
 
-    // Filter bookmarks based on search query
+    // filter bookmarks based on search query
     const filteredBookmarks = bookmarks.filter((bookmark) =>
         (bookmark?.body?.toLowerCase() || "").includes(searchQuery.trim().toLowerCase()) ||
         (bookmark?.url?.toLowerCase() || "").includes(searchQuery.trim().toLowerCase()) ||
         (bookmark?.description?.toLowerCase() || "").includes(searchQuery.trim().toLowerCase())
     );
 
-
-    // Sort bookmarks
+    // sorting bookmarks
     const sortedBookmarks = [...filteredBookmarks].sort((a, b) => {
         switch (sortBy) {
             case "oldest":
@@ -72,7 +72,7 @@ const BookmarksPage = () => {
         }
     });
 
-    // Format date function
+    // format date function
     const formatDate = (dateString?: string) => {
         if (!dateString) return "N/A";
         const date = new Date(dateString);
@@ -85,17 +85,18 @@ const BookmarksPage = () => {
     };
 
     // handler method for creating bookmark
-    const handleCreateBookmark = async (newBookmark:{body: string, url: string, description: string}) => {
+    const handleCreateBookmark = async (newBookmark:{body: string, description: string, url: string}) => {
         const created = await createBookmark(newBookmark);
         if(created){
             setSearchQuery("");
         }
+        return created;
     }
 
-    // archive bookmark handler method
+    // archive bookmark handler
     const handleArchiveBookmark = async (id: number) => {
-        await archiveBookmark(id);
-        setSearchQuery("");
+        await archiveBookmark(id, true);
+        setOpenMenuId(null);
     }
 
     const handleDeleteBookmark = async (id: number) => {
@@ -218,22 +219,24 @@ const BookmarksPage = () => {
                 </div>
 
                 {/* Bookmarks Grid */}
-                {sortedBookmarks.length === 0 && !bookmarksLoading ?(
+                {sortedBookmarks.length === 0 ? (
                     <div className="text-center py-12">
                         <Search size={48} className="mx-auto text-gray-300 mb-4" />
                         <p className="text-gray-500 text-lg">
-                            {`No bookmarks found matching ${searchQuery.trim()}`}
+                            {searchQuery.trim() ? `No bookmarks found matching "${searchQuery.trim()}"` : "No bookmarks found"}
                         </p>
-                        <button
-                            onClick={() => setSearchQuery("")}
-                            className="mt-4 text-[#056760] font-medium hover:underline"
-                        >
-                            Clear search
-                        </button>
+                        {searchQuery.trim() && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="mt-4 text-[#056760] font-medium hover:underline"
+                            >
+                                Clear search
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        {sortedBookmarks.map((bookmark) => (
+                        {sortedBookmarks.filter(b => b && typeof b === "object" && "id" in b).map((bookmark) => (
                             <div
                                 key={bookmark.id}
                                 className="bg-[#e5e5e6] rounded-lg border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow duration-200 hover:border-gray-300"
@@ -242,11 +245,11 @@ const BookmarksPage = () => {
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                                            {bookmark.icon_url || bookmarksLoading ? (
+                                            {bookmark?.icon_url ? (
                                                 <Image
                                                     width={30}
                                                     height={30}
-                                                    src={bookmark.icon_url}
+                                                    src={bookmark?.icon_url}
                                                     alt={bookmark.body}
                                                     className="w-full h-full object-cover"
                                                     onError={(e) => {
@@ -255,16 +258,16 @@ const BookmarksPage = () => {
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
-                                                    {bookmark?.body?.charAt(0).toUpperCase()}
+                                                    {bookmark?.body?.charAt(0).toUpperCase() || "B"}
                                                 </div>
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-semibold text-gray-900 truncate">
-                                                {bookmark.body}
+                                                {bookmark?.body || "Untitled"}
                                             </h3>
                                             <a
-                                                href={`${process.env.NEXT_PUBLIC_API_URL}/${bookmark.short_url}`}
+                                                href={bookmark.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-xs text-blue-600 hover:text-blue-800 truncate flex items-center gap-1 hover:underline"
@@ -295,7 +298,7 @@ const BookmarksPage = () => {
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 <a
-                                                    href={bookmark.short_url}
+                                                    href={bookmark.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-200"
@@ -312,7 +315,10 @@ const BookmarksPage = () => {
                                                 >
                                                     📋 Copy URL
                                                 </button>
-                                                <button onClick={()=>handleArchiveBookmark(bookmark.id)} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-200">
+                                                <button
+                                                    onClick={() => handleArchiveBookmark(bookmark.id)}
+                                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left border-b border-gray-200"
+                                                >
                                                     <Archive size={16} />
                                                     Archive
                                                 </button>
