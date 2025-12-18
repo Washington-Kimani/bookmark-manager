@@ -3,30 +3,22 @@
 import React, { useEffect } from "react";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import Navbar from "@/src/components/layout/navbar";
 import Sidebar from "@/src/components/layout/sidebar";
-import Loading from "@/src/components/layout/loading";
 
 export default function ProtectedLayout({
-                                          children,
+                                            children,
                                         }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading, startActivityListener } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     // Only redirect after auth context has finished loading
-    if (!isLoading && !isAuthenticated) {
+    if (!isAuthenticated) {
       router.push("/login");
     }
-    startActivityListener();
-  }, [isLoading, isAuthenticated, router]);
-
-  // show loading spinner while checking auth state
-  if (isLoading) {
-    return <Loading />
-  }
+  }, [isAuthenticated, router]);
 
   // If not authenticated after loading, don't render the layout
   if (!isAuthenticated) {

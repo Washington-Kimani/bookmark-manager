@@ -12,7 +12,7 @@ export default function AuthLayout(
         children: React.ReactNode;
     }
 ) {
-  const { isAuthenticated, startActivityListener } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +20,6 @@ export default function AuthLayout(
     if (isAuthenticated) {
       router.push("/bookmarks");
     }
-    startActivityListener();
   }, [isAuthenticated, router]);
 
   return (

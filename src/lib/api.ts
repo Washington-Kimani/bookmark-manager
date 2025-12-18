@@ -35,7 +35,7 @@ export const usersApi = {
     },
 
     // get one user
-    getUserById: async (id: number): Promise<User | null> => {
+    getUserById: async (id: number | undefined): Promise<User | null> => {
         try {
             const response = await api.get(`/users/${id}`, {
                 headers: authService.getAuthHeader()
