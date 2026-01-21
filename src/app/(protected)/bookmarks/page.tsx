@@ -30,6 +30,7 @@ const BookmarksPage = () => {
         createBookmark,
         deleteBookmark,
         error,
+        meta,
     } = useBookmarks(token);
 
     const [isAddBookmarkOpen, setIsAddBookmarkOpen] = useState<boolean>(false);
@@ -38,13 +39,14 @@ const BookmarksPage = () => {
         "recent"
     );
     const [openMenuId, setOpenMenuId] = useState<number | null>();
+    const [currentPage, setCurrentPage] = useState<number>(1);
 
     // fetch bookmarks on mount and when token changes
     useEffect(() => {
         if (token) {
-            fetchBookmarks();
+            fetchBookmarks(currentPage);
         }
-    }, [token, fetchBookmarks]);
+    }, [token, fetchBookmarks, currentPage]);
 
     // filter bookmarks based on search query
     const filteredBookmarks = bookmarks.filter((bookmark) =>
@@ -89,6 +91,7 @@ const BookmarksPage = () => {
         const created = await createBookmark(newBookmark);
         if(created){
             setSearchQuery("");
+            fetchBookmarks(currentPage); // refetch to update pagination
         }
         return created;
     }
@@ -97,12 +100,14 @@ const BookmarksPage = () => {
     const handleArchiveBookmark = async (id: number) => {
         await archiveBookmark(id, true);
         setOpenMenuId(null);
+        fetchBookmarks(currentPage); // refetch to update pagination
     }
 
     const handleDeleteBookmark = async (id: number) => {
         await deleteBookmark(id);
         setOpenMenuId(null);
         setSearchQuery("");
+        fetchBookmarks(currentPage); // refetch to update pagination meta
     };
 
     const handleCopyUrl = async (url: string) => {
@@ -139,7 +144,7 @@ const BookmarksPage = () => {
         return (
             <section className="w-full h-screen flex items-center justify-center p-4">
                 <div className="w-full lg:w-1/2 text-center">
-                    <div className="mb-6 p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                    <div className="mb-6 p-8 bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                         <h1 className="text-2xl font-bold text-gray-900 mb-3">
                             No bookmarks yet!
                         </h1>
@@ -257,7 +262,7 @@ const BookmarksPage = () => {
                                                     }}
                                                 />
                                             ) : (
-                                                <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
+                                                <div className="w-full h-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
                                                     {bookmark?.body?.charAt(0).toUpperCase() || "B"}
                                                 </div>
                                             )}
@@ -355,6 +360,29 @@ const BookmarksPage = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Pagination */}
+                {meta && meta.pages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={!meta.has_prev}
+                            className="px-4 py-2 bg-[#056760] text-white rounded-lg hover:bg-[#045d55] disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-white">
+                            Page {meta.page} of {meta.pages} ({meta.total_count} total)
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(meta.pages, prev + 1))}
+                            disabled={!meta.has_next}
+                            className="px-4 py-2 bg-[#056760] text-white rounded-lg hover:bg-[#045d55] disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                        >
+                            Next
+                        </button>
                     </div>
                 )}
             </div>

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/src/contexts/AuthContext";
 import Image from "next/image";
 import { DoorOpen } from "lucide-react";
+import {Flex, Button} from "@chakra-ui/react"
+import Link from "next/link";
 
 export default function Home() {
   const router = useRouter();
@@ -48,6 +50,13 @@ export default function Home() {
             <span>Start for Free</span>
           </button>
         </div>
+        <Flex
+            as={Link}
+            href="/"
+        >
+          Hello
+
+        </Flex>
       </section>
     </div>
   );

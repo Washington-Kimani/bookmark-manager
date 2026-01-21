@@ -3,16 +3,17 @@
 import { useReducer, useCallback } from "react";
 import { api } from "@/src/configs/api";
 import { toast } from "sonner";
-import {Bookmark} from "@/src/utils/types";
+import { Bookmark, PaginationMeta } from "@/src/utils/types";
 
 interface BookmarkState {
     bookmarks: Bookmark[];
     loading: boolean;
     error: string | null;
+    meta: PaginationMeta | null;
 }
 
 type BookmarkAction =
-    | { type: "SET_BOOKMARKS"; payload: Bookmark[] }
+    | { type: "SET_BOOKMARKS"; payload: { bookmarks: Bookmark[]; meta: PaginationMeta } }
     | { type: "ADD_BOOKMARK"; payload: Bookmark }
     | { type: "UPDATE_BOOKMARK"; payload: Bookmark }
     | { type: "ARCHIVE_BOOKMARK"; payload: number }
@@ -25,6 +26,7 @@ const initialState: BookmarkState = {
     bookmarks: [],
     loading: true,
     error: null,
+    meta: null,
 };
 
 function bookmarkReducer(
@@ -35,7 +37,8 @@ function bookmarkReducer(
         case "SET_BOOKMARKS":
             return {
                 ...state,
-                bookmarks: action.payload,
+                bookmarks: action.payload.bookmarks,
+                meta: action.payload.meta,
                 loading: false,
                 error: null,
             };
@@ -59,7 +62,7 @@ function bookmarkReducer(
                 bookmarks: state.bookmarks.filter(b => b.id !== action.payload),
             };
         case "UPSERT_BOOKMARK":
-            const exists = state.bookmarks.map(b => b.id === action.payload?.id);
+            const exists = state.bookmarks.some(b => b.id === action.payload?.id);
 
             return {
                 ...state,
@@ -94,19 +97,32 @@ function bookmarkReducer(
 export function useBookmarks(token: string | null) {
     const [state, dispatch] = useReducer(bookmarkReducer, initialState);
 
-    const fetchBookmarks = useCallback(async () => {
+    const fetchBookmarks = useCallback(async (page: number = 1) => {
         if (!token) return;
         dispatch({ type: "SET_LOADING", payload: true });
 
         try {
             const response = await api.get("/bookmarks", {
                 headers: { Authorization: `Bearer ${token}` },
+                params: { page },
             });
 
-            // handle different data formats
+            // Extract bookmarks and pagination metadata
             const bookmarksData = response.data.data || response.data;
             const bookmarks = Array.isArray(bookmarksData) ? bookmarksData : [bookmarksData];
-            dispatch({ type: "SET_BOOKMARKS", payload: bookmarks });
+
+            // Extract pagination meta (adjust based on your API structure)
+            const meta: PaginationMeta = response.data.meta || {
+                current_page: page,
+                last_page: 1,
+                per_page: bookmarks.length,
+                total: bookmarks.length,
+            };
+
+            dispatch({
+                type: "SET_BOOKMARKS",
+                payload: { bookmarks, meta }
+            });
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
             dispatch({
@@ -128,10 +144,12 @@ export function useBookmarks(token: string | null) {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-
                 const newBookmark: Bookmark = response.data.data;
-                dispatch({ type: "ADD_BOOKMARK", payload: newBookmark });
                 toast.success("Bookmark created successfully");
+
+                // Refetch first page to stay in sync
+                await fetchBookmarks(1);
+
                 return newBookmark;
             } catch (error) {
                 const errorMsg = `Failed to create bookmark: ${error}`;
@@ -139,7 +157,7 @@ export function useBookmarks(token: string | null) {
                 toast.error(errorMsg);
             }
         },
-        [token]
+        [token, fetchBookmarks]
     );
 
     const updateBookmark = useCallback(
@@ -157,10 +175,12 @@ export function useBookmarks(token: string | null) {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                // assume updated bookmark is at response.data.data
                 const updatedBookmark: Bookmark = response.data.data;
-                dispatch({ type: "UPDATE_BOOKMARK", payload: updatedBookmark });
                 toast.success("Bookmark updated successfully");
+
+                // refetch current page to stay in sync
+                await fetchBookmarks(state.meta?.page || 1);
+
                 return updatedBookmark;
             } catch (error) {
                 const errorMsg = `Failed to update bookmark: ${error}`;
@@ -168,10 +188,10 @@ export function useBookmarks(token: string | null) {
                 toast.error(errorMsg);
             }
         },
-        [token]
+        [token, fetchBookmarks, state.meta]
     );
 
-    const fetchArchivedBookmarks = useCallback(async () => {
+    const fetchArchivedBookmarks = useCallback(async (page: number = 1) => {
         if (!token) {
             dispatch({
                 type: "SET_ERROR",
@@ -185,11 +205,23 @@ export function useBookmarks(token: string | null) {
         try {
             const response = await api.get("/bookmarks/archived", {
                 headers: { Authorization: `Bearer ${token}` },
+                params: { page },
             });
 
-            // assumes API returns { data: { data: Bookmark[] } }
-            dispatch({ type: "SET_BOOKMARKS", payload: response.data.data });
-            dispatch({ type: "SET_LOADING", payload: false });
+            const bookmarksData = response.data.data || response.data;
+            const bookmarks = Array.isArray(bookmarksData) ? bookmarksData : [bookmarksData];
+
+            const meta: PaginationMeta = response.data.meta || {
+                current_page: page,
+                last_page: 1,
+                per_page: bookmarks.length,
+                total: bookmarks.length,
+            };
+
+            dispatch({
+                type: "SET_BOOKMARKS",
+                payload: { bookmarks, meta }
+            });
         } catch (error) {
             dispatch({
                 type: "SET_ERROR",
@@ -211,29 +243,21 @@ export function useBookmarks(token: string | null) {
 
                 const updatedBookmark: Bookmark = response.data.data;
 
-                if (archived) {
-                    // remove from active list
-                    dispatch({ type: "ARCHIVE_BOOKMARK", payload: id });
-                } else {
-                    // automatically re-add to active list
-                    dispatch({
-                        type: "SET_BOOKMARKS",
-                        payload: [updatedBookmark],
-                    });
-                }
-
                 toast.success(
                     archived
                         ? "Bookmark archived"
                         : "Bookmark restored"
                 );
 
+                // Refetch current page to stay in sync
+                await fetchBookmarks(state.meta?.page || 1);
+
                 return updatedBookmark;
             } catch (error) {
-                toast.error("Failed to update bookmark");
+                toast.error(`Failed to archive bookmark: ${error}`);
             }
         },
-        [token]
+        [token, fetchBookmarks, state.meta]
     );
 
     const deleteBookmark = useCallback(
@@ -249,16 +273,19 @@ export function useBookmarks(token: string | null) {
                 await api.delete(`/bookmarks/${id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                dispatch({ type: "DELETE_BOOKMARK", payload: id });
+
                 toast.success("Bookmark deleted successfully");
+
+                // refresh current page to stay in sync
+                await fetchBookmarks(state.meta?.page || 1);
             } catch (error) {
                 const errorMsg = `Failed to delete bookmark: ${error}`;
                 dispatch({ type: "SET_ERROR", payload: errorMsg });
                 toast.error(errorMsg);
             }
         },
-        [token]
-    )
+        [token, fetchBookmarks, state.meta]
+    );
 
     return {
         ...state,
