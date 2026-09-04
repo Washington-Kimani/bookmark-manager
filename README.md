@@ -1,6 +1,6 @@
 # Bookmarks Manager (Frontend)
 ## Demo Image
-
+![Demo Image](public/demo.png)
 
 A modern, minimal bookmarks manager web app built with Next.js App Router. It lets you create, search, sort, and manage bookmarks with an authenticated experience. This repository contains the frontend; it talks to a REST API backend via Axios.
 
