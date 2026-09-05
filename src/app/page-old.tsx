@@ -87,10 +87,10 @@ export default function Home() {
   ];
 
   return (
-    <div className="w-full min-h-screen flex flex-col bg-gray-50">
+    <div className="w-full min-h-screen flex flex-col">
       {/* Hero Section */}
-      <section className="w-full py-8 md:py-12 px-4 flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-8 bg-white rounded-xl shadow-lg overflow-hidden">
+      <section className="w-full py-8 md:py-12 px-4 flex items-center justify-center">
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-8 rounded-xl shadow-lg overflow-hidden">
           {/* Image */}
           <div className="w-full lg:w-1/2 h-64 md:h-96 relative">
             <Image
@@ -211,7 +211,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="flex gap-4">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-[#26425A] rounded-full flex items-center justify-center text-white">
+                <div className="w-12 h-12 bg-[#056760] rounded-full flex items-center justify-center text-white">
                   <Check2Icon />
                 </div>
               </div>
@@ -228,12 +228,9 @@ export default function Home() {
 
             <div className="flex gap-4">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-[#86A8CF] rounded-full flex items-center justify-center text-white">
+                <div className="w-12 h-12 bg-[#26425A] rounded-full flex items-center justify-center text-white">
                   <Check2Icon />
                 </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">No Ads</h3>
                 <p className="text-gray-600">
                   Enjoy a clean, distraction-free experience without any
                   advertisements.
@@ -243,7 +240,7 @@ export default function Home() {
 
             <div className="flex gap-4">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-[#C38EB4] rounded-full flex items-center justify-center text-white">
+                <div className="w-12 h-12 bg-[#056760] rounded-full flex items-center justify-center text-white">
                   <Check2Icon />
                 </div>
               </div>
@@ -260,7 +257,7 @@ export default function Home() {
 
             <div className="flex gap-4">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-[#26425A] rounded-full flex items-center justify-center text-white">
+                <div className="w-12 h-12 bg-[#056760] rounded-full flex items-center justify-center text-white">
                   <Check2Icon />
                 </div>
               </div>

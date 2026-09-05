@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Bookmarks Manager",
   description: "Handle all your bookmarks in a modern way",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
